@@ -1,0 +1,51 @@
+name: ALAB Bollinger Alert
+
+on:
+  schedule:
+    # Jede Stunde bei Minute 17
+    # UTC
+    - cron: "17 * * * *"
+
+  # Ermöglicht manuellen Start über GitHub
+  workflow_dispatch:
+
+jobs:
+
+  check-alab:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python installieren
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten installieren
+        run: |
+          pip install -r requirements.txt
+
+      - name: ALAB Strategie prüfen
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+
+        run: |
+          python alab_alert.py
+
+      - name: Alert-State speichern
+        run: |
+          git config user.name "ALAB Alert Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add alab_state.json
+
+          git diff --cached --quiet || git commit -m "Update ALAB alert state"
+
+          git push
